@@ -2,19 +2,21 @@
 // Usage:
 //   node server/seed.js                       (uses defaults / env)
 //   ADMIN_EMAIL=you@co ADMIN_PASSWORD=secret node server/seed.js
-import { db } from './db.js';
+import { db, initDb } from './db.js';
 import { hashPassword } from './auth.js';
 
 const email = (process.env.ADMIN_EMAIL || 'admin@company.local').toLowerCase();
 const password = process.env.ADMIN_PASSWORD || 'changeme123';
 
-const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+await initDb();
+
+const existing = await db.get('SELECT id FROM users WHERE email = ?', email);
 if (existing) {
-  db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(hashPassword(password), email);
+  await db.run('UPDATE users SET password_hash = ? WHERE email = ?', hashPassword(password), email);
   console.log(`Updated admin password for ${email}`);
 } else {
-  db.prepare('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)')
-    .run(email, hashPassword(password), 'admin');
+  await db.run('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
+    email, hashPassword(password), 'admin');
   console.log(`Created admin user ${email}`);
 }
 
@@ -24,3 +26,4 @@ console.log(`  password: ${password}`);
 if (password === 'changeme123') {
   console.log('\n⚠  Using the default password. Set ADMIN_PASSWORD and re-run seed for production.');
 }
+process.exit(0);

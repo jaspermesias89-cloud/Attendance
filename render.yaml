@@ -1,22 +1,21 @@
-# Render Blueprint. In Render: New → Blueprint → point at this repo.
-# Note: a persistent disk requires a paid instance type (free web services
-# have ephemeral storage and would lose the SQLite database on redeploy).
+# Render Blueprint — FREE web service (no paid disk).
+# The database lives in Turso (hosted SQLite), so Render only runs the app and
+# needs no persistent disk. In Render: New → Blueprint → point at this repo,
+# then fill in the values marked `sync: false` (see DEPLOY.md).
 services:
   - type: web
     name: aperture-attendance
     runtime: docker
-    plan: starter
+    plan: free
     healthCheckPath: /api/health
     envVars:
-      - key: APERTURE_DB
-        value: /data/aperture.db
       - key: APERTURE_SECRET
         generateValue: true       # random, persisted by Render
+      - key: TURSO_DATABASE_URL
+        sync: false               # libsql://<your-db>.turso.io
+      - key: TURSO_AUTH_TOKEN
+        sync: false               # from `turso db tokens create`
       - key: ADMIN_EMAIL
-        sync: false               # set in the dashboard
+        sync: false               # first-boot admin
       - key: ADMIN_PASSWORD
-        sync: false               # set in the dashboard
-    disk:
-      name: data
-      mountPath: /data
-      sizeGB: 1
+        sync: false               # first-boot admin

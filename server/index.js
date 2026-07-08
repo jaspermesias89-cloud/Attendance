@@ -1,7 +1,7 @@
 import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { db } from './db.js'; // initialise DB + schema on boot
+import { db, initDb } from './db.js';
 import { hashPassword } from './auth.js';
 
 import authRoutes from './routes/auth.js';
@@ -15,11 +15,12 @@ const PORT = process.env.PORT || 3000;
 
 // First-boot admin bootstrap for hosts without shell access (cloud deploys).
 // Creates the admin from env vars only when no users exist yet.
-if (process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD) {
-  const { c } = db.prepare('SELECT COUNT(*) AS c FROM users').get();
-  if (c === 0) {
-    db.prepare('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)')
-      .run(process.env.ADMIN_EMAIL.toLowerCase(), hashPassword(process.env.ADMIN_PASSWORD), 'admin');
+async function bootstrapAdmin() {
+  if (!(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD)) return;
+  const row = await db.get('SELECT COUNT(*) AS c FROM users');
+  if (row.c === 0) {
+    await db.run('INSERT INTO users (email, password_hash, role) VALUES (?, ?, ?)',
+      process.env.ADMIN_EMAIL.toLowerCase(), hashPassword(process.env.ADMIN_PASSWORD), 'admin');
     console.log(`Bootstrapped admin user ${process.env.ADMIN_EMAIL}`);
   }
 }
@@ -59,6 +60,21 @@ app.get('/api/health', (req, res) => res.json({ ok: true }));
 // Static frontend + self-hosted face models
 app.use(express.static(join(__dirname, '..', 'public')));
 
-app.listen(PORT, () => {
-  console.log(`Aperture attendance running on http://localhost:${PORT}`);
+// JSON error handler (catches rejections forwarded by the ah() wrapper).
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(500).json({ error: 'Server error' });
 });
+
+// Initialise the DB (await schema) before accepting requests.
+initDb()
+  .then(bootstrapAdmin)
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Aperture attendance running on http://localhost:${PORT}`);
+    });
+  })
+  .catch((e) => {
+    console.error('Failed to start:', e);
+    process.exit(1);
+  });

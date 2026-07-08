@@ -1,6 +1,6 @@
--- Aperture attendance schema (SQLite / node:sqlite)
-PRAGMA journal_mode = WAL;
-PRAGMA foreign_keys = ON;
+-- Aperture attendance schema (libSQL / SQLite — local file or Turso)
+-- No PRAGMAs here: journal mode is managed by the backend, and FK cascades are
+-- handled explicitly in code (see routes) so behaviour is identical on Turso.
 
 CREATE TABLE IF NOT EXISTS users (
   id            INTEGER PRIMARY KEY AUTOINCREMENT,

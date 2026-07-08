@@ -1,17 +1,17 @@
 import { Router } from 'express';
 import { db } from '../db.js';
 import { verifyPassword, signToken, verifyToken } from '../auth.js';
-import { parseCookies } from '../middleware.js';
+import { parseCookies, ah } from '../middleware.js';
 
 const router = Router();
 
 const COOKIE = 'aperture_session';
 const TTL = 60 * 60 * 12; // 12h
 
-router.post('/login', (req, res) => {
+router.post('/login', ah(async (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-  const user = db.prepare('SELECT * FROM users WHERE email = ?').get(String(email).toLowerCase());
+  const user = await db.get('SELECT * FROM users WHERE email = ?', String(email).toLowerCase());
   if (!user || !verifyPassword(password, user.password_hash)) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
@@ -25,7 +25,7 @@ router.post('/login', (req, res) => {
     path: '/',
   });
   res.json({ ok: true, user: { email: user.email, role: user.role } });
-});
+}));
 
 router.post('/logout', (req, res) => {
   res.clearCookie(COOKIE, { path: '/' });

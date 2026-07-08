@@ -1,80 +1,89 @@
-# Deploying Aperture to the cloud
+# Deploying Aperture
 
-This app needs a host that runs **Node.js** and gives it a **persistent volume** for the
-SQLite database. GitHub Pages cannot run it (static files only). All options below provide
-**HTTPS automatically**, which the webcam requires.
+The app talks to a **libSQL/SQLite** database. You have two storage choices:
 
-Set these environment variables on any platform:
+- **Turso** (hosted SQLite) — lets you run the app on a **free**, disk-less host like Render's
+  free tier. **Recommended for $0 hosting.**
+- **A local file on a persistent disk** — simplest if your host gives you a volume (Fly.io, a VPS).
 
-| Var | Value | Notes |
-|-----|-------|-------|
-| `APERTURE_DB` | `/data/aperture.db` | must live on the mounted volume |
-| `APERTURE_SECRET` | a long random string | signs cookies + kiosk tokens; keep stable |
-| `ADMIN_EMAIL` | your admin email | used once, on first boot, to create the admin |
-| `ADMIN_PASSWORD` | a strong password | used once, on first boot |
+All hosts below provide **HTTPS automatically**, which the webcam requires.
 
-> The admin is auto-created on **first boot** only (when no users exist). After that you can
-> change `ADMIN_PASSWORD` freely — it won't reset the account. Keep the volume and the account
-> persists.
+Environment variables the app understands:
+
+| Var | Purpose |
+|-----|---------|
+| `TURSO_DATABASE_URL` | `libsql://<db>.turso.io` — if set, the app uses Turso |
+| `TURSO_AUTH_TOKEN` | Turso token (with `TURSO_DATABASE_URL`) |
+| `APERTURE_DB` | local SQLite file path (used only when Turso vars are absent) |
+| `APERTURE_SECRET` | signs cookies + kiosk tokens; keep stable |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | creates the admin on first boot (when no users exist) |
+
+> The admin is created on **first boot** only. Afterwards, changing `ADMIN_PASSWORD` won't reset it.
 
 ---
 
-## Option A — Fly.io (recommended for SQLite)
+## Option A — Render (free) + Turso  ⭐ recommended for $0
 
-Fly has first-class persistent volumes and free-tier-friendly small machines.
-
+### 1. Create the Turso database
+Install the Turso CLI (https://docs.turso.tech/cli/installation), then:
 ```bash
-# 1. Install flyctl and sign in
-#    https://fly.io/docs/flyctl/install/
+turso auth signup                     # free account
+turso db create aperture              # create the database
+turso db show aperture --url          # -> libsql://aperture-<you>.turso.io   (TURSO_DATABASE_URL)
+turso db tokens create aperture       # -> a long token                        (TURSO_AUTH_TOKEN)
+```
+> No CLI? You can also create the DB and copy the URL + token from the Turso web dashboard.
+
+### 2. Deploy on Render
+1. Go to https://dashboard.render.com → **New + → Blueprint** → select your
+   `jaspermesias89-cloud/Attendance` repo. It reads `render.yaml` and creates a **free** Docker
+   web service (no disk).
+2. When prompted, fill in the `sync: false` variables:
+   - `TURSO_DATABASE_URL` = the `libsql://…` URL from step 1
+   - `TURSO_AUTH_TOKEN` = the token from step 1
+   - `ADMIN_EMAIL` = your admin email
+   - `ADMIN_PASSWORD` = a strong password
+   (`APERTURE_SECRET` is generated automatically.)
+3. **Apply**. First build takes ~3–5 min. In **Logs** look for `Bootstrapped admin user …` and
+   `Aperture attendance running …`.
+4. Open the `…onrender.com` URL and sign in.
+
+**Free-tier note:** the service sleeps after ~15 min idle and takes ~30–60 s to wake on the next
+request (the first scan each morning is slow, then instant). Your data is safe in Turso regardless.
+
+---
+
+## Option B — Fly.io (local SQLite on a volume)
+
+Uses `fly.toml` (a persistent volume, no Turso needed). Fly's small machines are cheap but not
+strictly free.
+```bash
 fly auth login
-
-# 2. Claim an app name (edit fly.toml's `app` + `primary_region` first, or let launch set them).
-#    --no-deploy so we can create the volume and secrets before the first deploy.
 fly launch --no-deploy --copy-config --name your-unique-name
-
-# 3. Create the persistent volume (must match [[mounts]].source in fly.toml)
-fly volumes create aperture_data --size 1 --region <your-region>
-
-# 4. Set secrets (these become env vars, encrypted)
+fly volumes create aperture_data --size 1 --region <region>
 fly secrets set APERTURE_SECRET=$(openssl rand -hex 32) \
-                ADMIN_EMAIL=you@company.com \
-                ADMIN_PASSWORD='a-strong-password'
-
-# 5. Deploy
+                ADMIN_EMAIL=you@company.com ADMIN_PASSWORD='a-strong-password'
 fly deploy
 ```
-
-Open `https://your-unique-name.fly.dev` and sign in. Details in `fly.toml`.
+`fly.toml` already sets `APERTURE_DB=/data/aperture.db` on the mounted volume.
 
 ---
 
-## Option B — Railway
+## Option C — Railway (Turso or a volume)
 
-1. Push this repo to GitHub (done).
-2. Railway → **New Project → Deploy from GitHub repo** → pick this repo. It builds from the
-   `Dockerfile` automatically.
-3. Add a **Volume** and mount it at `/data`.
-4. In **Variables**, set `APERTURE_DB=/data/aperture.db`, `APERTURE_SECRET`, `ADMIN_EMAIL`,
-   `ADMIN_PASSWORD`.
-5. Deploy; open the generated URL.
-
-## Option C — Render
-
-1. Render → **New → Blueprint** → point at this repo (uses `render.yaml`).
-2. It provisions a Docker web service + a 1 GB disk at `/data`.
-3. Fill in `ADMIN_EMAIL` and `ADMIN_PASSWORD` when prompted (they're `sync: false`).
-4. Deploy; open the `onrender.com` URL.
-   > A persistent disk requires a **paid** instance — free web services lose the database on redeploy.
+1. Railway → **New Project → Deploy from GitHub repo** → this repo (builds from the `Dockerfile`).
+2. Either add a **Volume** mounted at `/data` and set `APERTURE_DB=/data/aperture.db`, **or**
+   (simpler) set `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` and skip the volume.
+3. Also set `APERTURE_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`. Deploy and open the URL.
 
 ---
 
 ## After deploying
-1. Sign in at the app URL with your `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+1. Sign in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
 2. **Register** employees (camera + 3 samples + consent).
-3. **Kiosks → Create Kiosk**, open the generated link on the check-in device.
-4. Because the site is HTTPS, the camera works on any device — no extra TLS setup needed.
+3. **Kiosks → Create Kiosk** and open the generated link on each check-in device.
 
 ## Backups
-The whole database is the single file on the volume (`/data/aperture.db`). Back it up on a
-schedule (e.g. `fly ssh console` + copy off, or the platform's volume snapshots). It contains
-biometric face signatures — treat it as sensitive and encrypt off-site copies.
+- **Turso:** `turso db shell aperture ".dump" > backup.sql`, or use Turso's dashboard backups.
+- **Local file:** copy `aperture.db` off the volume.
+The data contains biometric face signatures — treat backups as sensitive and encrypt them.

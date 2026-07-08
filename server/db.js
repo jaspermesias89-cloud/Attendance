@@ -1,22 +1,59 @@
-import { DatabaseSync } from 'node:sqlite';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { createClient } from '@libsql/client';
+import { readFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// DB file lives next to the server code by default; override with APERTURE_DB.
-export const DB_PATH = process.env.APERTURE_DB || join(__dirname, '..', 'data', 'aperture.db');
+// Two backends, one client:
+//  - production: set TURSO_DATABASE_URL (+ TURSO_AUTH_TOKEN) → hosted libSQL
+//  - local dev:  no env → a local SQLite file (APERTURE_DB or data/aperture.db)
+let url, authToken;
+if (process.env.TURSO_DATABASE_URL) {
+  url = process.env.TURSO_DATABASE_URL;
+  authToken = process.env.TURSO_AUTH_TOKEN;
+} else {
+  const dbPath = process.env.APERTURE_DB || join(__dirname, '..', 'data', 'aperture.db');
+  mkdirSync(dirname(dbPath), { recursive: true });
+  url = pathToFileURL(dbPath).href.replace('file://', 'file:');
+}
 
-// Ensure the data directory exists.
-import { mkdirSync } from 'node:fs';
-mkdirSync(dirname(DB_PATH), { recursive: true });
+const client = createClient({ url, authToken, intMode: 'number' });
 
-export const db = new DatabaseSync(DB_PATH);
+// Accept either db.get(sql, a, b) or db.get(sql, [a, b]).
+function normArgs(args) {
+  return args.length === 1 && Array.isArray(args[0]) ? args[0] : args;
+}
 
-// Apply schema (idempotent — all statements use IF NOT EXISTS).
-const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
-db.exec(schema);
+// Small async adapter with a better-sqlite3-like surface.
+export const db = {
+  client,
+  async get(sql, ...args) {
+    const r = await client.execute({ sql, args: normArgs(args) });
+    return r.rows[0];
+  },
+  async all(sql, ...args) {
+    const r = await client.execute({ sql, args: normArgs(args) });
+    return r.rows;
+  },
+  async run(sql, ...args) {
+    const r = await client.execute({ sql, args: normArgs(args) });
+    return {
+      changes: Number(r.rowsAffected || 0),
+      lastInsertRowid: r.lastInsertRowid != null ? Number(r.lastInsertRowid) : undefined,
+    };
+  },
+  async exec(sql) {
+    await client.executeMultiple(sql);
+  },
+  transaction(mode = 'write') {
+    return client.transaction(mode);
+  },
+};
 
-// Ensure the single settings row exists.
-db.exec(`INSERT OR IGNORE INTO settings (id) VALUES (1);`);
+// Apply schema (idempotent) + ensure the single settings row. Await before serving.
+export async function initDb() {
+  const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
+  await client.executeMultiple(schema);
+  await client.execute('INSERT OR IGNORE INTO settings (id) VALUES (1)');
+}

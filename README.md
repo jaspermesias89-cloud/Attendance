@@ -3,16 +3,19 @@
 A self-hosted attendance system for a small company. Employees check in by looking at a webcam
 on a **kiosk**; managers enroll staff and view records in an **admin** console. Face recognition
 runs entirely in the browser (`face-api.js`) — raw video never leaves the device; only a numeric
-face signature and check-in events are sent to the server. Data lives in a single SQLite file.
+face signature and check-in events are sent to the server.
 
 ## Stack
-- **Backend:** Node.js + Express, SQLite via the built-in `node:sqlite` module (no native builds).
+- **Backend:** Node.js + Express, **libSQL/SQLite** via `@libsql/client`. Locally it uses a plain
+  SQLite file (`data/aperture.db`); in production it can point at **Turso** (hosted SQLite) so the
+  app runs on a free, disk-less host — same code, just env vars. See [DEPLOY.md](DEPLOY.md).
 - **Auth:** signed httpOnly cookie for admins; long-lived signed bearer token per kiosk.
 - **Frontend:** static HTML/CSS + ES modules, `face-api.js` (self-hosted under `public/vendor` and
   `public/models`).
 
 ## Requirements
-- Node.js **22+** (ships `node:sqlite`). Developed on Node 24.
+- Node.js **20+** (developed on Node 24). No native build tools needed — `@libsql/client` ships
+  prebuilt binaries.
 
 ## Setup
 
@@ -48,13 +51,16 @@ a certificate, or a tunnel. `localhost` on the same machine works without TLS fo
 | Var | Default | Purpose |
 |-----|---------|---------|
 | `PORT` | `3000` | HTTP port |
-| `APERTURE_DB` | `data/aperture.db` | SQLite file path |
+| `TURSO_DATABASE_URL` | — | if set, use hosted Turso instead of a local file |
+| `TURSO_AUTH_TOKEN` | — | Turso auth token (with `TURSO_DATABASE_URL`) |
+| `APERTURE_DB` | `data/aperture.db` | local SQLite path (when Turso vars are absent) |
 | `APERTURE_SECRET` | random, persisted to `data/.secret` | signs cookies + kiosk tokens |
-| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | used by `npm run seed` |
+| `ADMIN_EMAIL` / `ADMIN_PASSWORD` | — | seeds/creates the admin on first boot |
 
 ## Backups
-Everything is in the `data/` folder. To back up, stop the server (or use SQLite's online backup)
-and copy `data/aperture.db`. Because WAL mode is on, also copy `-wal`/`-shm` if the server is
+For a local file, stop the server and copy `data/aperture.db`. For Turso, use
+`turso db shell <db> ".dump" > backup.sql` or the Turso dashboard. Because WAL mode may be on for
+the local file, also copy `-wal`/`-shm` if the server is
 running. **Treat this file as sensitive** — it contains biometric face signatures. Restrict file
 permissions and encrypt off-site backups. Restore by copying the file back and restarting.
 
