@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Aperture — Attendance Admin</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/face-api.min.js"></script>
+</head>
+<body>
+
+<div id="boot-screen">
+  <div class="boot-ring"></div>
+  <p id="boot-text">STARTING…</p>
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen" style="display:none;">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3ed9c4" stroke-width="1.8"><path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </div>
+      <div>
+        <div class="login-title">Aperture</div>
+        <div class="login-sub">Admin Sign-in</div>
+      </div>
+    </div>
+    <form id="login-form">
+      <div class="form-field">
+        <label>Email</label>
+        <input type="email" id="login-email" autocomplete="username" placeholder="admin@company.local">
+      </div>
+      <div class="form-field">
+        <label>Password</label>
+        <input type="password" id="login-password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button class="btn primary full" type="submit">Sign in</button>
+      <div class="login-err" id="login-err"></div>
+    </form>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3ed9c4" stroke-width="1.8"><path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </div>
+      <div>
+        <div class="brand-name">Aperture</div>
+        <div class="brand-sub">Attendance · Vision</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item active" data-page="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>
+        <span>Dashboard</span>
+      </button>
+      <button class="nav-item" data-page="register">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M18 8v5M15.5 10.5h5"/></svg>
+        <span>Register</span>
+      </button>
+      <button class="nav-item" data-page="records">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>
+        <span>Records</span>
+      </button>
+      <button class="nav-item" data-page="devices">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        <span>Kiosks</span>
+      </button>
+      <button class="nav-item" data-page="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V21a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09A1.7 1.7 0 0 0 15 4.6a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09A1.7 1.7 0 0 0 19.4 15z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="status-row"><span class="status-dot ok" id="model-dot"></span><span id="model-status-text">Engine ready</span></div>
+      <div class="user-row"><span id="user-email">—</span><button class="link-btn" id="btn-logout">Sign out</button></div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <h1 id="page-title">Dashboard</h1>
+      <div class="topbar-right">
+        <div class="clock mono" id="clock">--:--:--</div>
+      </div>
+    </div>
+
+    <div class="page-scroll">
+
+      <!-- DASHBOARD -->
+      <section class="page active" id="page-dashboard">
+        <div class="stat-grid">
+          <div class="card stat-card viewfinder"><div class="vf-tr"></div><div class="vf-bl"></div>
+            <div class="stat-label">Registered</div>
+            <div class="stat-value" id="stat-registered">0</div>
+            <div class="stat-sub">Enrolled faces</div>
+          </div>
+          <div class="card stat-card viewfinder"><div class="vf-tr"></div><div class="vf-bl"></div>
+            <div class="stat-label">Present Today</div>
+            <div class="stat-value accent" id="stat-present">0</div>
+            <div class="stat-sub" id="stat-present-pct">0% of workforce</div>
+          </div>
+          <div class="card stat-card viewfinder"><div class="vf-tr"></div><div class="vf-bl"></div>
+            <div class="stat-label">Late Today</div>
+            <div class="stat-value amber" id="stat-late">0</div>
+            <div class="stat-sub">After cutoff time</div>
+          </div>
+          <div class="card stat-card viewfinder"><div class="vf-tr"></div><div class="vf-bl"></div>
+            <div class="stat-label">Absent Today</div>
+            <div class="stat-value danger" id="stat-absent">0</div>
+            <div class="stat-sub">Not yet scanned</div>
+          </div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="section-title">Recent Activity</div>
+            <div id="recent-activity"><div class="empty-note">No attendance recorded yet.</div></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Last 7 Days</div>
+            <div id="week-bars"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- REGISTER -->
+      <section class="page" id="page-register">
+        <div class="register-layout">
+          <div class="card">
+            <div class="section-title">New Enrollment</div>
+            <div class="cam-wrap viewfinder" id="reg-cam-wrap" style="aspect-ratio:1/1; margin-bottom:14px;">
+              <div class="vf-tr"></div><div class="vf-bl"></div>
+              <video id="reg-video" autoplay muted playsinline></video>
+              <div class="cam-overlay-msg" id="reg-cam-msg">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#8a97a3" stroke-width="1.6"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+                <p>Enable the camera to begin capturing samples.</p>
+              </div>
+            </div>
+            <button class="btn full" id="btn-reg-cam" style="margin-bottom:10px;">Enable Camera</button>
+
+            <div class="sample-row" id="sample-row">
+              <div class="sample-dot"></div><div class="sample-dot"></div><div class="sample-dot"></div>
+            </div>
+            <button class="btn full" id="btn-capture" disabled>Capture Sample (0/3)</button>
+
+            <div style="margin-top:18px; border-top:1px solid var(--border); padding-top:16px;">
+              <div class="form-field">
+                <label>Full Name</label>
+                <input type="text" id="reg-name" placeholder="e.g. Maria Santos">
+              </div>
+              <div class="form-field">
+                <label>Employee ID</label>
+                <input type="text" id="reg-id" placeholder="e.g. EMP-014">
+              </div>
+              <div class="form-field">
+                <label>Department</label>
+                <input type="text" id="reg-dept" placeholder="e.g. Operations">
+              </div>
+              <label class="consent-row">
+                <input type="checkbox" id="reg-consent">
+                <span>This employee consents to their facial data being stored for attendance. Only a numeric face signature is kept — no video or photos leave this device beyond an optional avatar thumbnail.</span>
+              </label>
+              <button class="btn primary full" id="btn-save-employee" disabled>Save Employee</button>
+              <p class="setting-note" id="reg-hint">Capture 3 face samples, then fill in the details above.</p>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-title">Enrolled Employees (<span id="emp-count">0</span>)</div>
+            <table class="table">
+              <thead><tr><th>Employee</th><th>ID</th><th>Department</th><th>Enrolled</th><th></th></tr></thead>
+              <tbody id="employee-table"><tr><td colspan="5" class="empty-note">No employees enrolled yet.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- RECORDS -->
+      <section class="page" id="page-records">
+        <div class="card">
+          <div class="section-title">
+            Attendance Records
+            <a class="btn" id="btn-export" href="/api/attendance/export.csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Export CSV</a>
+          </div>
+          <div class="filter-row">
+            <input type="text" id="filter-search" placeholder="Search by name or ID…">
+            <input type="date" id="filter-date">
+            <select id="filter-status">
+              <option value="">All statuses</option>
+              <option value="present">Present</option>
+              <option value="late">Late</option>
+            </select>
+            <button class="btn" id="btn-clear-filters">Clear filters</button>
+          </div>
+          <table class="table">
+            <thead><tr><th>Employee</th><th>Department</th><th>Date</th><th>Time</th><th>Kind</th><th>Status</th><th>Match</th></tr></thead>
+            <tbody id="records-table"><tr><td colspan="7" class="empty-note">No records yet.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- DEVICES / KIOSKS -->
+      <section class="page" id="page-devices">
+        <div class="register-layout">
+          <div class="card">
+            <div class="section-title">Add a Kiosk</div>
+            <p class="setting-note">A kiosk is a check-in station (a tablet or PC with a webcam) running the live scanner. Create one here, then open the kiosk link on that device — the token is embedded so it stays signed in.</p>
+            <div class="form-field" style="margin-top:14px;">
+              <label>Kiosk name</label>
+              <input type="text" id="device-name" placeholder="e.g. Front Door">
+            </div>
+            <button class="btn primary full" id="btn-add-device">Create Kiosk</button>
+            <div id="new-device-out"></div>
+          </div>
+          <div class="card">
+            <div class="section-title">Kiosks</div>
+            <table class="table">
+              <thead><tr><th>Name</th><th>Last seen</th><th></th></tr></thead>
+              <tbody id="devices-table"><tr><td colspan="3" class="empty-note">No kiosks yet.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="page" id="page-settings">
+        <div class="settings-grid">
+          <div class="card">
+            <div class="section-title">Recognition Threshold</div>
+            <p class="setting-note">Controls how strictly a scanned face must match an enrolled sample. Lower is stricter (fewer false matches); higher is more lenient.</p>
+            <div class="slider-row">
+              <input type="range" id="threshold-slider" min="0.35" max="0.7" step="0.01" value="0.5">
+              <span class="slider-val mono" id="threshold-val">0.50</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title">Late Cutoff Time</div>
+            <p class="setting-note">Employees checking in after this time are marked Late instead of Present.</p>
+            <div class="form-field" style="margin-top:10px;">
+              <input type="time" id="cutoff-time" value="09:30">
+            </div>
+          </div>
+          <div class="card">
+            <div class="section-title">Data</div>
+            <p class="setting-note">Enrolled faces and attendance history are stored in the server database and persist across sessions. Clearing them cannot be undone.</p>
+            <button class="btn danger-outline full" id="btn-clear-data" style="margin-top:10px;">Clear All Data</button>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<div id="toast-stack"></div>
+<script type="module" src="/js/admin.js"></script>
+</body>
+</html>

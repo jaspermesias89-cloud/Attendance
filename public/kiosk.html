@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Aperture — Check-in Kiosk</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/app.css">
+<script src="/vendor/face-api.min.js"></script>
+</head>
+<body>
+
+<div id="boot-screen">
+  <div class="boot-ring"></div>
+  <p id="boot-text">STARTING…</p>
+</div>
+
+<!-- token-missing screen -->
+<div class="login-screen" id="no-token" style="display:none;">
+  <div class="login-card">
+    <div class="login-brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3ed9c4" stroke-width="1.8"><path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </div>
+      <div><div class="login-title">Kiosk not linked</div><div class="login-sub">No device token</div></div>
+    </div>
+    <p class="setting-note">This device isn't linked to Aperture yet. Ask an admin to open <strong>Kiosks → Create Kiosk</strong> and open the generated link on this device.</p>
+  </div>
+</div>
+
+<div class="kiosk-body" id="kiosk" style="display:none;">
+  <div class="kiosk-top">
+    <div class="brand" style="border:none; padding:0; margin:0;">
+      <div class="brand-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3ed9c4" stroke-width="1.8"><path d="M4 7V5a1 1 0 0 1 1-1h2M20 7V5a1 1 0 0 0-1-1h-2M4 17v2a1 1 0 0 0 1 1h2M20 17v2a1 1 0 0 1-1 1h-2" stroke-linecap="round"/><circle cx="12" cy="12" r="3.2"/></svg>
+      </div>
+      <div><div class="brand-name" id="kiosk-name">Check-in</div><div class="brand-sub">Aperture Kiosk</div></div>
+    </div>
+    <div class="topbar-right">
+      <select id="kind-select" class="filter-row" style="padding:8px 11px; background:var(--panel-2); border:1px solid var(--border-light); border-radius:7px; font-size:12.5px;">
+        <option value="in">Clocking IN</option>
+        <option value="out">Clocking OUT</option>
+      </select>
+      <div class="clock mono" id="clock">--:--:--</div>
+    </div>
+  </div>
+  <div class="kiosk-main">
+    <div class="live-layout">
+      <div>
+        <div class="cam-wrap viewfinder" id="cam-wrap">
+          <div class="vf-tr"></div><div class="vf-bl"></div>
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
+          <div class="scan-sweep" id="sweep" style="display:none;"></div>
+          <div class="cam-overlay-msg" id="cam-msg">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#8a97a3" stroke-width="1.6"><rect x="3" y="6" width="13" height="12" rx="2"/><path d="M16 10l5-3v10l-5-3"/></svg>
+            <p>Press Start to begin scanning. Look at the camera to check in.</p>
+          </div>
+          <div class="recog-banner" id="recog-banner" style="display:none;">
+            <div>
+              <div class="recog-name" id="recog-name">—</div>
+              <div class="recog-sub" id="recog-sub">—</div>
+            </div>
+            <div class="recog-conf" id="recog-conf">—</div>
+          </div>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:14px;">
+          <button class="btn primary" id="btn-start-scan">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+            Start Scan
+          </button>
+          <button class="btn" id="btn-stop-scan" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="5" width="14" height="14" rx="1.5"/></svg>
+            Stop
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="section-title">Session Log</div>
+        <div class="log-panel" id="session-log">
+          <div class="empty-note">Check-ins from this session will appear here.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-stack"></div>
+<script type="module" src="/js/kiosk.js"></script>
+</body>
+</html>

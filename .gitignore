@@ -1,0 +1,8 @@
+node_modules/
+# Runtime data — the SQLite database, WAL files and the auth secret.
+# This is sensitive (contains biometric descriptors) — never commit it.
+data/
+*.db
+*.db-shm
+*.db-wal
+.env

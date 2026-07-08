@@ -1,0 +1,18 @@
+{
+  "name": "aperture-attendance",
+  "version": "1.0.0",
+  "description": "Facial-recognition attendance app with a real backend and SQLite storage",
+  "type": "module",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node server/index.js",
+    "seed": "node server/seed.js",
+    "dev": "node --watch server/index.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}
