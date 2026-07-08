@@ -54,5 +54,6 @@ CREATE TABLE IF NOT EXISTS settings (
   threshold   REAL NOT NULL DEFAULT 0.5,
   late_cutoff TEXT NOT NULL DEFAULT '09:30',
   work_start  TEXT NOT NULL DEFAULT '09:00',
-  work_end    TEXT NOT NULL DEFAULT '17:00'
+  work_end    TEXT NOT NULL DEFAULT '17:00',
+  timezone    TEXT NOT NULL DEFAULT 'UTC'  -- IANA name, e.g. Asia/Manila
 );

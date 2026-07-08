@@ -4,23 +4,26 @@ import { requireAdmin, requireAdminOrKiosk, ah } from '../middleware.js';
 
 const router = Router();
 
+const COLS = 'threshold, late_cutoff, work_start, work_end, timezone';
+
 // Kiosk needs the threshold; admins need everything. Both allowed to read.
 router.get('/settings', requireAdminOrKiosk, ah(async (req, res) => {
-  const s = await db.get('SELECT threshold, late_cutoff, work_start, work_end FROM settings WHERE id = 1');
+  const s = await db.get(`SELECT ${COLS} FROM settings WHERE id = 1`);
   res.json(s);
 }));
 
 router.put('/settings', requireAdmin, ah(async (req, res) => {
-  const cur = await db.get('SELECT threshold, late_cutoff, work_start, work_end FROM settings WHERE id = 1');
+  const cur = await db.get(`SELECT ${COLS} FROM settings WHERE id = 1`);
   const threshold = clampNum(req.body?.threshold, 0.3, 0.8, cur.threshold);
   const late_cutoff = validTime(req.body?.late_cutoff, cur.late_cutoff);
   const work_start = validTime(req.body?.work_start, cur.work_start);
   const work_end = validTime(req.body?.work_end, cur.work_end);
+  const timezone = validTimezone(req.body?.timezone, cur.timezone);
   await db.run(
-    'UPDATE settings SET threshold = ?, late_cutoff = ?, work_start = ?, work_end = ? WHERE id = 1',
-    threshold, late_cutoff, work_start, work_end
+    'UPDATE settings SET threshold = ?, late_cutoff = ?, work_start = ?, work_end = ?, timezone = ? WHERE id = 1',
+    threshold, late_cutoff, work_start, work_end, timezone
   );
-  res.json({ threshold, late_cutoff, work_start, work_end });
+  res.json({ threshold, late_cutoff, work_start, work_end, timezone });
 }));
 
 // Destructive: wipe employees, descriptors and attendance (keeps users/settings/devices).
@@ -36,6 +39,15 @@ function clampNum(v, min, max, fallback) {
 }
 function validTime(v, fallback) {
   return /^\d{2}:\d{2}$/.test(String(v || '')) ? v : fallback;
+}
+function validTimezone(v, fallback) {
+  if (!v || typeof v !== 'string') return fallback;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: v });
+    return v;
+  } catch {
+    return fallback;
+  }
 }
 
 export default router;

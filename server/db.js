@@ -56,4 +56,15 @@ export async function initDb() {
   const schema = readFileSync(join(__dirname, 'schema.sql'), 'utf8');
   await client.executeMultiple(schema);
   await client.execute('INSERT OR IGNORE INTO settings (id) VALUES (1)');
+  // Lightweight migrations for databases created before a column existed.
+  await addColumnIfMissing('settings', 'timezone', "TEXT NOT NULL DEFAULT 'UTC'");
+}
+
+async function addColumnIfMissing(table, column, definition) {
+  try {
+    await client.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (e) {
+    // "duplicate column name" → already migrated; ignore.
+    if (!/duplicate column/i.test(String(e.message || e))) throw e;
+  }
 }

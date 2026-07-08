@@ -415,7 +415,36 @@ function applySettingsToUI() {
   $('threshold-slider').value = settings.threshold;
   $('threshold-val').textContent = Number(settings.threshold).toFixed(2);
   $('cutoff-time').value = settings.late_cutoff;
+  populateTimezones();
 }
+
+function populateTimezones() {
+  const sel = $('timezone-select');
+  let zones = [];
+  try { zones = Intl.supportedValuesOf('timeZone'); } catch { zones = []; }
+  if (!zones.length) {
+    zones = ['UTC', 'Asia/Manila', 'Asia/Singapore', 'Asia/Tokyo', 'Asia/Kolkata',
+      'Europe/London', 'Europe/Berlin', 'America/New_York', 'America/Los_Angeles', 'Australia/Sydney'];
+  }
+  if (!zones.includes('UTC')) zones.unshift('UTC');
+  const current = settings.timezone || 'UTC';
+  if (!zones.includes(current)) zones.unshift(current);
+  sel.innerHTML = zones.map((z) => `<option value="${escapeHtml(z)}">${escapeHtml(z)}</option>`).join('');
+  sel.value = current;
+}
+
+$('timezone-select').addEventListener('change', (e) => { settings.timezone = e.target.value; saveSettings(); });
+$('btn-tz-device').addEventListener('click', () => {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const sel = $('timezone-select');
+  if (![...sel.options].some((o) => o.value === tz)) {
+    const o = document.createElement('option'); o.value = tz; o.textContent = tz; sel.appendChild(o);
+  }
+  sel.value = tz;
+  settings.timezone = tz;
+  saveSettings();
+  toast('Timezone set', tz);
+});
 let settingsTimer;
 $('threshold-slider').addEventListener('input', (e) => {
   settings.threshold = parseFloat(e.target.value);
@@ -425,7 +454,10 @@ $('threshold-slider').addEventListener('input', (e) => {
 });
 $('cutoff-time').addEventListener('change', (e) => { settings.late_cutoff = e.target.value; saveSettings(); });
 async function saveSettings() {
-  settings = await api('/settings', { method: 'PUT', body: { threshold: settings.threshold, late_cutoff: settings.late_cutoff } });
+  settings = await api('/settings', {
+    method: 'PUT',
+    body: { threshold: settings.threshold, late_cutoff: settings.late_cutoff, timezone: settings.timezone },
+  });
 }
 $('btn-clear-data').addEventListener('click', () => {
   confirmModal('Clear all data?', 'This permanently deletes every enrolled employee and attendance record. This cannot be undone.', async () => {
