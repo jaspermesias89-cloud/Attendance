@@ -160,7 +160,19 @@ async function timesheetRows(query) {
     ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
     ORDER BY a.employee_id, a.local_date, a.ts ASC
   `, params);
-  return computeTimesheet(rows);
+
+  // Pay = worked hours prorated at the standard daily rate (e.g. ₱450 / 8h).
+  const s = await db.get('SELECT daily_rate, standard_hours FROM settings WHERE id = 1');
+  const rate = Number(s?.daily_rate ?? 450);
+  const stdHours = Number(s?.standard_hours) > 0 ? Number(s.standard_hours) : 8;
+  const hourly = rate / stdHours;
+
+  const sheet = computeTimesheet(rows);
+  for (const r of sheet) {
+    r.hourly_rate = +hourly.toFixed(2);
+    r.pay = +((r.worked_minutes / 60) * hourly).toFixed(2);
+  }
+  return sheet;
 }
 
 router.get('/timesheet', requireAdmin, ah(async (req, res) => {
@@ -179,13 +191,13 @@ function fmtHM(minutes) {
 
 router.get('/timesheet/export.csv', requireAdmin, ah(async (req, res) => {
   const rows = await timesheetRows(req.query);
-  const header = ['Name', 'Employee ID', 'Department', 'Date', 'Clock In', 'Clock Out', 'Hours Worked', 'Hours (decimal)'];
+  const header = ['Name', 'Employee ID', 'Department', 'Date', 'Clock In', 'Clock Out', 'Hours Worked', 'Hours (decimal)', 'Pay (PHP)'];
   const lines = [header.map(csvEscape).join(',')];
   for (const r of rows) {
     lines.push([
       r.name, r.emp_code, r.department, r.date,
       r.first_in || '', r.last_out || (r.open ? 'still in' : ''),
-      fmtHM(r.worked_minutes), r.worked_hours,
+      fmtHM(r.worked_minutes), r.worked_hours, r.pay.toFixed(2),
     ].map(csvEscape).join(','));
   }
   res.setHeader('Content-Type', 'text/csv');

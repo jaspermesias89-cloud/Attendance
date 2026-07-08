@@ -4,7 +4,7 @@ import { requireAdmin, requireAdminOrKiosk, ah } from '../middleware.js';
 
 const router = Router();
 
-const COLS = 'threshold, late_cutoff, work_start, work_end, timezone';
+const COLS = 'threshold, late_cutoff, work_start, work_end, timezone, daily_rate, standard_hours';
 
 // Kiosk needs the threshold; admins need everything. Both allowed to read.
 router.get('/settings', requireAdminOrKiosk, ah(async (req, res) => {
@@ -19,11 +19,13 @@ router.put('/settings', requireAdmin, ah(async (req, res) => {
   const work_start = validTime(req.body?.work_start, cur.work_start);
   const work_end = validTime(req.body?.work_end, cur.work_end);
   const timezone = validTimezone(req.body?.timezone, cur.timezone);
+  const daily_rate = clampNum(req.body?.daily_rate, 0, 1000000, cur.daily_rate);
+  const standard_hours = clampNum(req.body?.standard_hours, 0.5, 24, cur.standard_hours);
   await db.run(
-    'UPDATE settings SET threshold = ?, late_cutoff = ?, work_start = ?, work_end = ?, timezone = ? WHERE id = 1',
-    threshold, late_cutoff, work_start, work_end, timezone
+    'UPDATE settings SET threshold = ?, late_cutoff = ?, work_start = ?, work_end = ?, timezone = ?, daily_rate = ?, standard_hours = ? WHERE id = 1',
+    threshold, late_cutoff, work_start, work_end, timezone, daily_rate, standard_hours
   );
-  res.json({ threshold, late_cutoff, work_start, work_end, timezone });
+  res.json({ threshold, late_cutoff, work_start, work_end, timezone, daily_rate, standard_hours });
 }));
 
 // Destructive: wipe employees, descriptors and attendance (keeps users/settings/devices).

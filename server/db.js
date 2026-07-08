@@ -58,6 +58,8 @@ export async function initDb() {
   await client.execute('INSERT OR IGNORE INTO settings (id) VALUES (1)');
   // Lightweight migrations for databases created before a column existed.
   await addColumnIfMissing('settings', 'timezone', "TEXT NOT NULL DEFAULT 'UTC'");
+  await addColumnIfMissing('settings', 'daily_rate', 'REAL NOT NULL DEFAULT 450');
+  await addColumnIfMissing('settings', 'standard_hours', 'REAL NOT NULL DEFAULT 8');
 }
 
 async function addColumnIfMissing(table, column, definition) {

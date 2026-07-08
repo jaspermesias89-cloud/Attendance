@@ -398,6 +398,7 @@ async function renderHours() {
     const worked = r.open
       ? '<span class="badge late">In progress</span>'
       : (r.worked_minutes > 0 ? fmtHM(r.worked_minutes) : '—');
+    const pay = r.worked_minutes > 0 ? '₱' + r.pay.toFixed(2) : '—';
     return `<tr>
       <td>${escapeHtml(r.name)}</td>
       <td>${escapeHtml(r.department)}</td>
@@ -405,6 +406,7 @@ async function renderHours() {
       <td class="mono">${r.first_in || '—'}</td>
       <td class="mono">${r.last_out || '—'}</td>
       <td>${worked}</td>
+      <td class="mono">${pay}</td>
     </tr>`;
   }).join('');
 }
@@ -459,6 +461,16 @@ function applySettingsToUI() {
   $('threshold-val').textContent = Number(settings.threshold).toFixed(2);
   $('cutoff-time').value = settings.late_cutoff;
   populateTimezones();
+  $('daily-rate').value = settings.daily_rate ?? 450;
+  $('standard-hours').value = settings.standard_hours ?? 8;
+  updateHourlyNote();
+}
+
+function updateHourlyNote() {
+  const rate = Number($('daily-rate').value) || 0;
+  const hrs = Number($('standard-hours').value) || 0;
+  const hourly = hrs > 0 ? (rate / hrs) : 0;
+  $('hourly-note').textContent = `Hourly rate: ₱${hourly.toFixed(2)}`;
 }
 
 function populateTimezones() {
@@ -496,10 +508,27 @@ $('threshold-slider').addEventListener('input', (e) => {
   settingsTimer = setTimeout(saveSettings, 300);
 });
 $('cutoff-time').addEventListener('change', (e) => { settings.late_cutoff = e.target.value; saveSettings(); });
+
+let rateTimer;
+['daily-rate', 'standard-hours'].forEach((id) =>
+  $(id).addEventListener('input', () => {
+    updateHourlyNote();
+    settings.daily_rate = Number($('daily-rate').value) || 0;
+    settings.standard_hours = Number($('standard-hours').value) || 8;
+    clearTimeout(rateTimer);
+    rateTimer = setTimeout(saveSettings, 400);
+  }));
+
 async function saveSettings() {
   settings = await api('/settings', {
     method: 'PUT',
-    body: { threshold: settings.threshold, late_cutoff: settings.late_cutoff, timezone: settings.timezone },
+    body: {
+      threshold: settings.threshold,
+      late_cutoff: settings.late_cutoff,
+      timezone: settings.timezone,
+      daily_rate: settings.daily_rate,
+      standard_hours: settings.standard_hours,
+    },
   });
 }
 $('btn-clear-data').addEventListener('click', () => {

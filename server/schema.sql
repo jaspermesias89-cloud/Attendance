@@ -55,5 +55,7 @@ CREATE TABLE IF NOT EXISTS settings (
   late_cutoff TEXT NOT NULL DEFAULT '09:30',
   work_start  TEXT NOT NULL DEFAULT '09:00',
   work_end    TEXT NOT NULL DEFAULT '17:00',
-  timezone    TEXT NOT NULL DEFAULT 'UTC'  -- IANA name, e.g. Asia/Manila
+  timezone    TEXT NOT NULL DEFAULT 'UTC', -- IANA name, e.g. Asia/Manila
+  daily_rate  REAL NOT NULL DEFAULT 450,   -- pay for a standard day
+  standard_hours REAL NOT NULL DEFAULT 8   -- hours that make up a standard day
 );
