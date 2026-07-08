@@ -21,9 +21,7 @@
 <div class="login-screen" id="no-token" style="display:none;">
   <div class="login-card">
     <div class="login-brand">
-      <div class="brand-mark">
-        <svg viewBox="0 0 34 22" style="width:28px;height:auto;"><text x="17" y="17" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-weight="700" font-size="14" fill="#3ed9c4" letter-spacing="0.2">SJM</text></svg>
-      </div>
+      <img class="brand-logo notoken-logo" src="/logo.png" alt="SJMgraphix">
       <div><div class="login-title">Kiosk not linked</div><div class="login-sub">No device token</div></div>
     </div>
     <p class="setting-note">This device isn't linked to SJM Graphix Attendance yet. Ask an admin to open <strong>Kiosks → Create Kiosk</strong> and open the generated link on this device.</p>
@@ -32,11 +30,9 @@
 
 <div class="kiosk-body" id="kiosk" style="display:none;">
   <div class="kiosk-top">
-    <div class="brand" style="border:none; padding:0; margin:0;">
-      <div class="brand-mark">
-        <svg viewBox="0 0 34 22" style="width:28px;height:auto;"><text x="17" y="17" text-anchor="middle" font-family="'Space Grotesk',sans-serif" font-weight="700" font-size="14" fill="#3ed9c4" letter-spacing="0.2">SJM</text></svg>
-      </div>
-      <div><div class="brand-name" id="kiosk-name">Check-in</div><div class="brand-sub">SJM Graphix Kiosk</div></div>
+    <div class="brand" style="border:none; padding:0; margin:0; gap:12px;">
+      <img class="brand-logo kiosk-logo" src="/logo.png" alt="SJMgraphix">
+      <div><div class="brand-name" id="kiosk-name">Check-in</div><div class="brand-sub">Laser Engrave &amp; Cutting</div></div>
     </div>
     <div class="topbar-right">
       <select id="kind-select" class="filter-row" style="padding:8px 11px; background:var(--panel-2); border:1px solid var(--border-light); border-radius:7px; font-size:12.5px;">
