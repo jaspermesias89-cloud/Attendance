@@ -25,14 +25,27 @@ Environment variables the app understands:
 ## Option A — Render (free) + Turso  ⭐ recommended for $0
 
 ### 1. Create the Turso database
-Install the Turso CLI (https://docs.turso.tech/cli/installation), then:
+
+**Via the web dashboard (works on Windows — no CLI):**
+1. Sign up at https://turso.tech (GitHub login).
+2. **Create Database** → name it `aperture`, pick a region.
+   - Optional: choose **"Seed from a database file"** and upload the ready file produced by
+     `npm run seed:file` (creates `turso-seed.db` with the schema + an admin user). To bake in your
+     own admin: `ADMIN_EMAIL=you@co ADMIN_PASSWORD=secret npm run seed:file`.
+3. Copy the database **URL** (`libsql://…`) → `TURSO_DATABASE_URL`.
+4. **Create Token** → copy it → `TURSO_AUTH_TOKEN`.
+
+> The app also creates all tables automatically on first boot, so the upload is optional — it just
+> lets you pre-seed an admin. If you don't upload a seeded file, set `ADMIN_EMAIL`/`ADMIN_PASSWORD`
+> on Render instead.
+
+**Or via the CLI (macOS/Linux/WSL only — no native Windows build):**
 ```bash
-turso auth signup                     # free account
-turso db create aperture              # create the database
-turso db show aperture --url          # -> libsql://aperture-<you>.turso.io   (TURSO_DATABASE_URL)
-turso db tokens create aperture       # -> a long token                        (TURSO_AUTH_TOKEN)
+turso auth signup
+turso db create aperture --from-file turso-seed.db   # or omit --from-file for an empty DB
+turso db show aperture --url          # -> TURSO_DATABASE_URL
+turso db tokens create aperture       # -> TURSO_AUTH_TOKEN
 ```
-> No CLI? You can also create the DB and copy the URL + token from the Turso web dashboard.
 
 ### 2. Deploy on Render
 1. Go to https://dashboard.render.com → **New + → Blueprint** → select your
