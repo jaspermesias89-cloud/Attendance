@@ -83,5 +83,6 @@ public/            frontend
 data/              SQLite db + secret (gitignored)
 ```
 
-> `index.html` at the repo root is the original single-file prototype, kept for reference. The
-> live app is served from `public/`.
+> The original single-file prototype (browser-only storage) lived at the repo root; it has been
+> removed to avoid confusion. It remains available in git history if you need it. The live app is
+> served from `public/`.
