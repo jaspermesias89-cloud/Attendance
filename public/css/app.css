@@ -64,10 +64,10 @@ button, input, select{font-family:inherit; color:inherit;}
 
 /* SJMgraphix logo (full-colour, transparent PNG — shows as-is on dark panels) */
 .brand-logo{display:block; height:auto; max-width:100%;}
-.sidebar-logo{width:100%; max-width:196px; margin:0 auto;}
-.login-logo{width:236px; max-width:100%;}
-.kiosk-logo{height:42px; width:auto;}
-.notoken-logo{width:150px; margin-bottom:4px;}
+.sidebar-logo{width:100%; max-width:140px; margin:0 auto;}
+.login-logo{width:180px; max-width:100%;}
+.kiosk-logo{height:34px; width:auto;}
+.notoken-logo{width:120px; margin-bottom:4px;}
 
 .nav{display:flex; flex-direction:column; gap:2px; margin-top:6px;}
 .nav-item{
