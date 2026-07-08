@@ -67,6 +67,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M9 12h6M9 16h6M9 8h2"/></svg>
         <span>Records</span>
       </button>
+      <button class="nav-item" data-page="hours">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        <span>Hours</span>
+      </button>
       <button class="nav-item" data-page="devices">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="4" y="3" width="16" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
         <span>Kiosks</span>
@@ -201,6 +205,26 @@
           <table class="table">
             <thead><tr><th>Employee</th><th>Department</th><th>Date</th><th>Time</th><th>Kind</th><th>Status</th><th>Match</th></tr></thead>
             <tbody id="records-table"><tr><td colspan="7" class="empty-note">No records yet.</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- HOURS / TIMESHEET -->
+      <section class="page" id="page-hours">
+        <div class="card">
+          <div class="section-title">
+            Hours Worked
+            <a class="btn" id="btn-export-hours" href="/api/timesheet/export.csv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 19h16"/></svg>Export CSV</a>
+          </div>
+          <p class="setting-note" style="margin-bottom:14px;">Time between clock-in and clock-out each day. Breaks (multiple in/out pairs) are excluded from the total.</p>
+          <div class="filter-row">
+            <input type="text" id="hours-search" placeholder="Search by name or ID…">
+            <input type="date" id="hours-date">
+            <button class="btn" id="btn-hours-clear">Clear filters</button>
+          </div>
+          <table class="table">
+            <thead><tr><th>Employee</th><th>Department</th><th>Date</th><th>Clock In</th><th>Clock Out</th><th>Hours Worked</th></tr></thead>
+            <tbody id="hours-table"><tr><td colspan="6" class="empty-note">No hours to show yet.</td></tr></tbody>
           </table>
         </div>
       </section>

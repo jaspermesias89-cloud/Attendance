@@ -105,9 +105,93 @@ router.get('/attendance/summary', requireAdmin, ah(async (req, res) => {
   res.json({ total, present, late, absent: Math.max(0, total - checkedIn), date });
 }));
 
+// ---- Timesheet: hours worked per employee per day ----
+// Pairs each 'in' with the following 'out' and sums the durations (so lunch
+// breaks etc. are excluded). A dangling 'in' means the person is still clocked in.
+function computeTimesheet(rows) {
+  const groups = new Map();
+  for (const r of rows) {
+    const key = r.employee_id + '|' + r.local_date;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        employee_id: r.employee_id, name: r.name, emp_code: r.emp_code,
+        department: r.department, date: r.local_date, events: [],
+      });
+    }
+    groups.get(key).events.push(r);
+  }
+  const out = [];
+  for (const g of groups.values()) {
+    let firstIn = null, lastOut = null, openIn = null, totalMs = 0;
+    for (const e of g.events) {
+      if (e.kind === 'in') {
+        openIn = e;
+        if (!firstIn) firstIn = e;
+      } else {
+        if (openIn) { totalMs += new Date(e.ts) - new Date(openIn.ts); openIn = null; }
+        lastOut = e;
+      }
+    }
+    const worked_minutes = Math.max(0, Math.round(totalMs / 60000));
+    out.push({
+      employee_id: g.employee_id, name: g.name, emp_code: g.emp_code,
+      department: g.department, date: g.date,
+      first_in: firstIn ? firstIn.local_time : null,
+      last_out: lastOut ? lastOut.local_time : null,
+      worked_minutes,
+      worked_hours: +(worked_minutes / 60).toFixed(2),
+      open: openIn !== null, // still clocked in (no closing 'out')
+    });
+  }
+  out.sort((a, b) => b.date.localeCompare(a.date) || a.name.localeCompare(b.name));
+  return out;
+}
+
+async function timesheetRows(query) {
+  const { date, q } = query;
+  const where = [];
+  const params = [];
+  if (date) { where.push('a.local_date = ?'); params.push(date); }
+  if (q) { where.push('(e.name LIKE ? OR e.emp_code LIKE ?)'); params.push(`%${q}%`, `%${q}%`); }
+  const rows = await db.all(`
+    SELECT a.employee_id, a.ts, a.local_date, a.local_time, a.kind,
+           e.name, e.emp_code, e.department
+    FROM attendance a JOIN employees e ON e.id = a.employee_id
+    ${where.length ? 'WHERE ' + where.join(' AND ') : ''}
+    ORDER BY a.employee_id, a.local_date, a.ts ASC
+  `, params);
+  return computeTimesheet(rows);
+}
+
+router.get('/timesheet', requireAdmin, ah(async (req, res) => {
+  res.json(await timesheetRows(req.query));
+}));
+
 function csvEscape(v) {
   return `"${String(v ?? '').replace(/"/g, '""')}"`;
 }
+
+function fmtHM(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+
+router.get('/timesheet/export.csv', requireAdmin, ah(async (req, res) => {
+  const rows = await timesheetRows(req.query);
+  const header = ['Name', 'Employee ID', 'Department', 'Date', 'Clock In', 'Clock Out', 'Hours Worked', 'Hours (decimal)'];
+  const lines = [header.map(csvEscape).join(',')];
+  for (const r of rows) {
+    lines.push([
+      r.name, r.emp_code, r.department, r.date,
+      r.first_in || '', r.last_out || (r.open ? 'still in' : ''),
+      fmtHM(r.worked_minutes), r.worked_hours,
+    ].map(csvEscape).join(','));
+  }
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="timesheet.csv"');
+  res.send(lines.join('\n'));
+}));
 
 router.get('/attendance/export.csv', requireAdmin, ah(async (req, res) => {
   const rows = await db.all(`

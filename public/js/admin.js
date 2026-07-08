@@ -90,11 +90,12 @@ document.querySelectorAll('.nav-item').forEach((btn) => {
     btn.classList.add('active');
     const page = btn.dataset.page;
     $('page-' + page).classList.add('active');
-    const titles = { dashboard: 'Dashboard', register: 'Register Employee', records: 'Attendance Records', devices: 'Check-in Kiosks', settings: 'Settings' };
+    const titles = { dashboard: 'Dashboard', register: 'Register Employee', records: 'Attendance Records', hours: 'Hours Worked', devices: 'Check-in Kiosks', settings: 'Settings' };
     $('page-title').textContent = titles[page];
     if (page !== 'register') stopRegCam();
     if (page === 'dashboard') { await refreshData(); renderDashboard(); }
     if (page === 'records') { records = await api('/attendance'); renderRecords(); }
+    if (page === 'hours') renderHours();
     if (page === 'register') { employees = await api('/employees'); renderEmployeeTable(); }
     if (page === 'devices') renderDevices();
   });
@@ -371,6 +372,48 @@ let filterTimer;
 $('btn-clear-filters').addEventListener('click', () => {
   $('filter-search').value = ''; $('filter-date').value = ''; $('filter-status').value = '';
   renderRecords();
+});
+
+// ================= HOURS / TIMESHEET =================
+function fmtHM(minutes) {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${String(m).padStart(2, '0')}m`;
+}
+async function renderHours() {
+  const q = $('hours-search').value.trim();
+  const date = $('hours-date').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (date) params.set('date', date);
+  const qs = params.toString();
+  $('btn-export-hours').href = '/api/timesheet/export.csv' + (qs ? '?' + qs : '');
+  const rows = await api('/timesheet' + (qs ? '?' + qs : ''));
+  const tbody = $('hours-table');
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-note">No hours match your filters.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = rows.map((r) => {
+    const worked = r.open
+      ? '<span class="badge late">In progress</span>'
+      : (r.worked_minutes > 0 ? fmtHM(r.worked_minutes) : '—');
+    return `<tr>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${escapeHtml(r.department)}</td>
+      <td class="mono">${r.date}</td>
+      <td class="mono">${r.first_in || '—'}</td>
+      <td class="mono">${r.last_out || '—'}</td>
+      <td>${worked}</td>
+    </tr>`;
+  }).join('');
+}
+let hoursTimer;
+['hours-search', 'hours-date'].forEach((id) =>
+  $(id).addEventListener('input', () => { clearTimeout(hoursTimer); hoursTimer = setTimeout(renderHours, 200); }));
+$('btn-hours-clear').addEventListener('click', () => {
+  $('hours-search').value = ''; $('hours-date').value = '';
+  renderHours();
 });
 
 // ================= DEVICES =================
