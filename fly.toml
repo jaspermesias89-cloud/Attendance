@@ -1,0 +1,28 @@
+# Fly.io config. Run `fly launch --no-deploy` first to claim a unique app name,
+# or edit `app` below to something available, then follow DEPLOY.md.
+app = "aperture-attendance"
+primary_region = "iad"   # change to your nearest region (e.g. lhr, fra, sin, syd)
+
+[build]
+
+[env]
+  PORT = "3000"
+  APERTURE_DB = "/data/aperture.db"
+
+[http_service]
+  internal_port = 3000
+  force_https = true          # camera access requires HTTPS
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  # A kiosk that scans continuously keeps the machine awake. If you want it
+  # always-on during work hours (no cold-start), set this to 1.
+  min_machines_running = 0
+
+# Persistent volume so the SQLite database survives restarts and redeploys.
+[[mounts]]
+  source = "aperture_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

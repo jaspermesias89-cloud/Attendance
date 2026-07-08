@@ -1,0 +1,22 @@
+# Render Blueprint. In Render: New → Blueprint → point at this repo.
+# Note: a persistent disk requires a paid instance type (free web services
+# have ephemeral storage and would lose the SQLite database on redeploy).
+services:
+  - type: web
+    name: aperture-attendance
+    runtime: docker
+    plan: starter
+    healthCheckPath: /api/health
+    envVars:
+      - key: APERTURE_DB
+        value: /data/aperture.db
+      - key: APERTURE_SECRET
+        generateValue: true       # random, persisted by Render
+      - key: ADMIN_EMAIL
+        sync: false               # set in the dashboard
+      - key: ADMIN_PASSWORD
+        sync: false               # set in the dashboard
+    disk:
+      name: data
+      mountPath: /data
+      sizeGB: 1
