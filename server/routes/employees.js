@@ -51,6 +51,21 @@ router.post('/employees', requireAdmin, ah(async (req, res) => {
   }
 }));
 
+// Update an employee's details (name / code / department). Does not touch face samples.
+router.put('/employees/:id', requireAdmin, ah(async (req, res) => {
+  const { emp_code, name, department } = req.body || {};
+  if (!emp_code || !name) return res.status(400).json({ error: 'emp_code and name are required' });
+  const emp = await db.get('SELECT id FROM employees WHERE id = ?', req.params.id);
+  if (!emp) return res.status(404).json({ error: 'Not found' });
+  const clash = await db.get('SELECT id FROM employees WHERE emp_code = ? AND id <> ?', emp_code, req.params.id);
+  if (clash) return res.status(409).json({ error: 'Another employee already uses this code' });
+  await db.run(
+    'UPDATE employees SET emp_code = ?, name = ?, department = ? WHERE id = ?',
+    emp_code, name, department || '', req.params.id
+  );
+  res.json({ ok: true });
+}));
+
 router.delete('/employees/:id', requireAdmin, ah(async (req, res) => {
   const id = req.params.id;
   // Explicit cascade (FK enforcement isn't relied upon across backends).

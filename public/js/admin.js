@@ -272,8 +272,17 @@ function renderEmployeeTable() {
       <td class="mono">${escapeHtml(e.emp_code)}</td>
       <td>${escapeHtml(e.department)}</td>
       <td class="mono">${e.enrolled_at}</td>
-      <td><button class="btn danger-outline" data-remove="${e.id}" style="padding:5px 10px; font-size:11px;">Remove</button></td>
+      <td style="white-space:nowrap;">
+        <button class="btn" data-edit="${e.id}" style="padding:5px 10px; font-size:11px;">Edit</button>
+        <button class="btn danger-outline" data-remove="${e.id}" style="padding:5px 10px; font-size:11px;">Remove</button>
+      </td>
     </tr>`).join('');
+  tbody.querySelectorAll('[data-edit]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const emp = employees.find((e) => String(e.id) === btn.dataset.edit);
+      if (emp) editEmployeeModal(emp);
+    });
+  });
   tbody.querySelectorAll('[data-remove]').forEach((btn) => {
     btn.addEventListener('click', () => {
       confirmModal('Remove employee?', 'This deletes the employee and their attendance history. This cannot be undone.', async () => {
@@ -283,6 +292,51 @@ function renderEmployeeTable() {
       });
     });
   });
+}
+
+function editEmployeeModal(emp) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.innerHTML = `<div class="modal">
+    <h3>Edit Employee</h3>
+    <div class="form-field"><label>Full Name</label><input type="text" id="edit-name"></div>
+    <div class="form-field"><label>Employee ID</label><input type="text" id="edit-id"></div>
+    <div class="form-field"><label>Department</label><input type="text" id="edit-dept"></div>
+    <div class="login-err" id="edit-err"></div>
+    <div class="modal-actions">
+      <button class="btn" data-cancel>Cancel</button>
+      <button class="btn primary" data-save>Save</button>
+    </div></div>`;
+  document.body.appendChild(backdrop);
+  const nameEl = backdrop.querySelector('#edit-name');
+  const idEl = backdrop.querySelector('#edit-id');
+  const deptEl = backdrop.querySelector('#edit-dept');
+  const errEl = backdrop.querySelector('#edit-err');
+  nameEl.value = emp.name;
+  idEl.value = emp.emp_code;
+  deptEl.value = emp.department;
+  nameEl.focus();
+
+  backdrop.querySelector('[data-cancel]').onclick = () => backdrop.remove();
+  const saveBtn = backdrop.querySelector('[data-save]');
+  saveBtn.onclick = async () => {
+    const name = nameEl.value.trim();
+    const emp_code = idEl.value.trim();
+    const department = deptEl.value.trim();
+    if (!name || !emp_code) { errEl.textContent = 'Name and Employee ID are required.'; return; }
+    saveBtn.disabled = true;
+    errEl.textContent = '';
+    try {
+      await api('/employees/' + emp.id, { method: 'PUT', body: { emp_code, name, department } });
+      employees = await api('/employees');
+      renderEmployeeTable();
+      backdrop.remove();
+      toast('Updated', name + ' saved');
+    } catch (e) {
+      errEl.textContent = e.message || 'Could not save';
+      saveBtn.disabled = false;
+    }
+  };
 }
 
 // ================= RECORDS =================
