@@ -2,7 +2,7 @@ import express from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { db, initDb } from './db.js';
-import { hashPassword } from './auth.js';
+import { hashPassword, initSecret } from './auth.js';
 
 import authRoutes from './routes/auth.js';
 import employeeRoutes from './routes/employees.js';
@@ -68,6 +68,7 @@ app.use((err, req, res, next) => {
 
 // Initialise the DB (await schema) before accepting requests.
 initDb()
+  .then(initSecret) // load/persist the token-signing secret before serving
   .then(bootstrapAdmin)
   .then(() => {
     app.listen(PORT, () => {

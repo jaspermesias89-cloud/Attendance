@@ -49,6 +49,13 @@ CREATE TABLE IF NOT EXISTS devices (
   last_seen TEXT
 );
 
+-- Internal key/value store (e.g. the token-signing secret) so values persist
+-- across restarts even on disk-less hosts where the DB is the only durable store.
+CREATE TABLE IF NOT EXISTS app_meta (
+  key   TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS settings (
   id          INTEGER PRIMARY KEY CHECK (id = 1),
   threshold   REAL NOT NULL DEFAULT 0.5,

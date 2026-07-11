@@ -1,25 +1,44 @@
 import { scryptSync, randomBytes, timingSafeEqual, createHmac } from 'node:crypto';
+import { db } from './db.js';
 
 // ---- Secret ----
-// In production set APERTURE_SECRET. If unset we persist a random one to disk so
-// tokens survive restarts on a single-server deployment.
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
+// Signs cookies + kiosk tokens. Preference order:
+//   1. APERTURE_SECRET env var (recommended — inject via your host's secrets).
+//   2. A random secret persisted in the database's app_meta table.
+// The DB fallback is what keeps tokens valid across restarts on disk-less hosts
+// (e.g. Render's free tier, where the container filesystem is ephemeral but the
+// Turso database is durable). Must be initialised via initSecret() before any
+// token is signed or verified — index.js does this after initDb().
+let SECRET = null;
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-function loadSecret() {
-  if (process.env.APERTURE_SECRET) return process.env.APERTURE_SECRET;
-  const dataDir = join(__dirname, '..', 'data');
-  mkdirSync(dataDir, { recursive: true });
-  const p = join(dataDir, '.secret');
-  if (existsSync(p)) return readFileSync(p, 'utf8').trim();
-  const s = randomBytes(32).toString('hex');
-  writeFileSync(p, s, { mode: 0o600 });
-  return s;
+export async function initSecret() {
+  if (process.env.APERTURE_SECRET) {
+    SECRET = process.env.APERTURE_SECRET;
+    return;
+  }
+  const existing = await db.get("SELECT value FROM app_meta WHERE key = 'token_secret'");
+  if (existing?.value) {
+    SECRET = existing.value;
+  } else {
+    // INSERT OR IGNORE + re-read so concurrent instances converge on one value.
+    await db.run(
+      "INSERT OR IGNORE INTO app_meta (key, value) VALUES ('token_secret', ?)",
+      randomBytes(32).toString('hex')
+    );
+    const row = await db.get("SELECT value FROM app_meta WHERE key = 'token_secret'");
+    SECRET = row.value;
+  }
+  console.warn(
+    '[auth] APERTURE_SECRET is not set — using a generated secret stored in the ' +
+    'database (tokens will persist across restarts). Set APERTURE_SECRET in your ' +
+    'environment for stronger secret management.'
+  );
 }
-const SECRET = loadSecret();
+
+function requireSecret() {
+  if (!SECRET) throw new Error('Token secret not initialised — call initSecret() during boot.');
+  return SECRET;
+}
 
 // ---- Password hashing (scrypt) ----
 export function hashPassword(password) {
@@ -44,14 +63,14 @@ function b64url(buf) {
 export function signToken(payload, ttlSeconds = 60 * 60 * 12) {
   const body = { ...payload, exp: Math.floor(Date.now() / 1000) + ttlSeconds };
   const data = b64url(JSON.stringify(body));
-  const sig = createHmac('sha256', SECRET).update(data).digest('base64url');
+  const sig = createHmac('sha256', requireSecret()).update(data).digest('base64url');
   return `${data}.${sig}`;
 }
 
 export function verifyToken(token) {
   if (!token || typeof token !== 'string' || !token.includes('.')) return null;
   const [data, sig] = token.split('.');
-  const expected = createHmac('sha256', SECRET).update(data).digest('base64url');
+  const expected = createHmac('sha256', requireSecret()).update(data).digest('base64url');
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
