@@ -98,6 +98,7 @@ document.querySelectorAll('.nav-item').forEach((btn) => {
     if (page === 'hours') renderHours();
     if (page === 'register') { employees = await api('/employees'); renderEmployeeTable(); }
     if (page === 'devices') renderDevices();
+    if (page === 'settings') renderDeptRates();
   });
 });
 
@@ -540,6 +541,87 @@ $('btn-clear-data').addEventListener('click', () => {
     toast('Cleared', 'All employees and records deleted');
   });
 });
+
+// ================= DEPARTMENT RATES =================
+let deptDefaults = { rate: 450, hours: 8 };
+
+async function renderDeptRates() {
+  const wrap = $('dept-rates-wrap');
+  let data;
+  try {
+    data = await api('/department-rates');
+  } catch {
+    wrap.innerHTML = '<div class="empty-note">Could not load department rates.</div>';
+    return;
+  }
+  deptDefaults = { rate: Number(data.default_daily_rate) || 0, hours: Number(data.default_standard_hours) || 8 };
+  $('dept-default-rate').textContent = deptDefaults.rate.toFixed(2);
+  $('dept-default-hours').textContent = deptDefaults.hours;
+  if (!data.departments.length) {
+    wrap.innerHTML = '<div class="empty-note">No departments yet — they appear here once employees are enrolled.</div>';
+    return;
+  }
+  wrap.innerHTML = `<table class="table">
+    <thead><tr><th>Department</th><th>Daily rate (₱)</th><th>Std hours / day</th><th>Effective hourly</th></tr></thead>
+    <tbody>${data.departments.map(deptRateRow).join('')}</tbody>
+  </table>`;
+}
+
+function deptHourly(d) {
+  if (d.daily_rate != null) {
+    const std = Number(d.standard_hours) > 0 ? Number(d.standard_hours) : 8;
+    return Number(d.daily_rate) / std;
+  }
+  return deptDefaults.hours > 0 ? deptDefaults.rate / deptDefaults.hours : 0;
+}
+
+function hourlyCell(d) {
+  const usingDefault = d.daily_rate == null;
+  const suffix = usingDefault ? ' <span style="color:var(--text-faint); font-size:10.5px;">(default)</span>' : '';
+  return `₱${deptHourly(d).toFixed(2)}${suffix}`;
+}
+
+function deptRateRow(d) {
+  const dept = escapeHtml(d.department);
+  const rateVal = d.daily_rate == null ? '' : d.daily_rate;
+  const hoursVal = d.standard_hours == null ? '' : d.standard_hours;
+  return `<tr data-dept="${dept}">
+    <td>${dept}</td>
+    <td><input type="number" min="0" step="0.01" class="dept-rate-input" data-field="rate" value="${rateVal}" placeholder="${deptDefaults.rate.toFixed(2)}" style="width:110px;"></td>
+    <td><input type="number" min="0.5" max="24" step="0.5" class="dept-rate-input" data-field="hours" value="${hoursVal}" placeholder="${deptDefaults.hours}" style="width:90px;"></td>
+    <td class="mono dept-hourly">${hourlyCell(d)}</td>
+  </tr>`;
+}
+
+const deptSaveTimers = new Map();
+$('dept-rates-wrap').addEventListener('input', (e) => {
+  const input = e.target.closest('.dept-rate-input');
+  if (!input) return;
+  const tr = input.closest('tr[data-dept]');
+  const dept = tr.dataset.dept;
+  clearTimeout(deptSaveTimers.get(dept));
+  deptSaveTimers.set(dept, setTimeout(() => saveDeptRate(tr), 500));
+});
+
+async function saveDeptRate(tr) {
+  const dept = tr.dataset.dept;
+  const rateStr = tr.querySelector('[data-field="rate"]').value.trim();
+  const hoursStr = tr.querySelector('[data-field="hours"]').value.trim();
+  const body = { department: dept };
+  if (rateStr === '') {
+    body.daily_rate = null; // clears the override → back to default
+  } else {
+    body.daily_rate = Number(rateStr);
+    body.standard_hours = hoursStr === '' ? deptDefaults.hours : Number(hoursStr);
+  }
+  try {
+    const saved = await api('/department-rates', { method: 'PUT', body });
+    tr.querySelector('.dept-hourly').innerHTML = hourlyCell(saved);
+    toast('Saved', `${dept} pay rate updated`);
+  } catch (e) {
+    toast('Could not save', e.message, 'error');
+  }
+}
 
 // ================= MODAL =================
 function confirmModal(title, body, onConfirm) {

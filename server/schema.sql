@@ -63,6 +63,14 @@ CREATE TABLE IF NOT EXISTS settings (
   work_start  TEXT NOT NULL DEFAULT '09:00',
   work_end    TEXT NOT NULL DEFAULT '17:00',
   timezone    TEXT NOT NULL DEFAULT 'UTC', -- IANA name, e.g. Asia/Manila
-  daily_rate  REAL NOT NULL DEFAULT 450,   -- pay for a standard day
+  daily_rate  REAL NOT NULL DEFAULT 450,   -- default pay for a standard day
   standard_hours REAL NOT NULL DEFAULT 8   -- hours that make up a standard day
+);
+
+-- Per-department pay overrides. A department without a row here falls back to the
+-- default daily_rate / standard_hours in settings.
+CREATE TABLE IF NOT EXISTS department_rates (
+  department     TEXT PRIMARY KEY,
+  daily_rate     REAL NOT NULL,
+  standard_hours REAL NOT NULL DEFAULT 8
 );

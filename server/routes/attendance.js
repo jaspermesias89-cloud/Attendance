@@ -161,14 +161,23 @@ async function timesheetRows(query) {
     ORDER BY a.employee_id, a.local_date, a.ts ASC
   `, params);
 
-  // Pay = worked hours prorated at the standard daily rate (e.g. ₱450 / 8h).
+  // Pay = worked hours prorated at the department's daily rate, or the default
+  // rate (e.g. ₱450 / 8h) when the department has no override.
   const s = await db.get('SELECT daily_rate, standard_hours FROM settings WHERE id = 1');
-  const rate = Number(s?.daily_rate ?? 450);
-  const stdHours = Number(s?.standard_hours) > 0 ? Number(s.standard_hours) : 8;
-  const hourly = rate / stdHours;
+  const defRate = Number(s?.daily_rate ?? 450);
+  const defHours = Number(s?.standard_hours) > 0 ? Number(s.standard_hours) : 8;
+  const overrides = await db.all('SELECT department, daily_rate, standard_hours FROM department_rates');
+  const deptMap = new Map(overrides.map((d) => [d.department, d]));
+  const hourlyFor = (department) => {
+    const d = deptMap.get(department);
+    if (!d) return defRate / defHours;
+    const std = Number(d.standard_hours) > 0 ? Number(d.standard_hours) : 8;
+    return Number(d.daily_rate) / std;
+  };
 
   const sheet = computeTimesheet(rows);
   for (const r of sheet) {
+    const hourly = hourlyFor(r.department);
     r.hourly_rate = +hourly.toFixed(2);
     r.pay = +((r.worked_minutes / 60) * hourly).toFixed(2);
   }
