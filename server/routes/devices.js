@@ -14,7 +14,7 @@ router.get('/devices', requireAdmin, ah(async (req, res) => {
 router.post('/devices', requireAdmin, ah(async (req, res) => {
   const name = String(req.body?.name || 'Kiosk').slice(0, 60);
   const id = 'dev_' + randomBytes(6).toString('hex');
-  const token = signToken({ kind: 'kiosk', device_id: id, name }, 60 * 60 * 24 * 365); // 1 year
+  const token = signToken({ kind: 'kiosk', device_id: id, name }, null); // non-expiring; revoke by deleting the device
   await db.run('INSERT INTO devices (id, name, token) VALUES (?, ?, ?)', id, name, token);
   res.status(201).json({ id, name, token });
 }));

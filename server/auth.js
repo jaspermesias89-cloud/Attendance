@@ -60,8 +60,12 @@ function b64url(buf) {
   return Buffer.from(buf).toString('base64url');
 }
 
+// ttlSeconds = null issues a non-expiring token (no exp claim). verifyToken
+// only enforces exp when present, so such a token stays valid until revoked
+// (e.g. deleting the kiosk device row). Used for kiosk device tokens.
 export function signToken(payload, ttlSeconds = 60 * 60 * 12) {
-  const body = { ...payload, exp: Math.floor(Date.now() / 1000) + ttlSeconds };
+  const body = { ...payload };
+  if (ttlSeconds !== null) body.exp = Math.floor(Date.now() / 1000) + ttlSeconds;
   const data = b64url(JSON.stringify(body));
   const sig = createHmac('sha256', requireSecret()).update(data).digest('base64url');
   return `${data}.${sig}`;
